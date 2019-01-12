@@ -1,0 +1,73 @@
+class Foo
+{
+    constructor()
+    {
+        if (so)
+        {
+            blah();
+        }
+    }
+}
+
+class Foo
+{
+    constructor()
+    {
+        if (so)
+        {
+            two()
+            lines();
+        }
+    }
+}
+
+class Foo
+{
+    constructor()
+    {
+        if (so)
+        {
+            some();
+            long();
+            thing();
+        }
+    }
+}
+
+class Foo
+{
+    constructor()
+    {
+        function f()
+        {
+            if (so)
+            ~~ [FAIL]
+            {
+                some();
+                long();
+                thing();
+            }
+
+            function f()
+            {
+                if (so)
+                ~~ [FAIL]
+                {
+                    some();
+                    long();
+                    thing();
+                }
+            }
+        }
+    }
+}
+
+// Making sure that if statement outside function scope doesn't cause error
+if (so)
+{
+    some();
+    long();
+    thing();
+}
+
+[FAIL]: Remainder of block is inside 'if' statement. Prefer to invert the condition and 'return' early.

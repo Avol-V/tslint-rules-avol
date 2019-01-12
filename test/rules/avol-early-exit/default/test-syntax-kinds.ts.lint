@@ -1,0 +1,128 @@
+// Tests for all kinds of parent nodes it should work on
+// 'switch' cases are in test-switch
+
+function f()
+{
+    if (so)
+    ~~ [RETURN]
+    {
+        two();
+        lines();
+    }
+}
+
+f = function()
+{
+    if (so)
+    ~~ [RETURN]
+    {
+        two();
+        lines();
+    }
+}
+
+f = () =>
+{
+    if (so)
+    ~~ [RETURN]
+    {
+        two();
+        lines();
+    }
+}
+
+class C
+{
+    constructor()
+    {
+        if (so)
+        ~~ [RETURN]
+        {
+            two();
+            lines();
+        }
+    }
+
+    m()
+    {
+        if (so)
+        ~~ [RETURN]
+        {
+            two();
+            lines();
+        }
+    }
+
+    get x()
+    {
+        if (so)
+        ~~ [RETURN]
+        {
+            two();
+            lines();
+        }
+    }
+
+    set s()
+    {
+        if (s)
+        ~~ [RETURN]
+        {
+            two();
+            lines();
+        }
+    }
+}
+
+for (const x in y)
+{
+    if (so)
+    ~~ [CONTINUE]
+    {
+        two();
+        lines();
+    }
+}
+
+for (const x of y)
+{
+    if (so)
+    ~~ [CONTINUE]
+    {
+        two();
+        lines();
+    }
+}
+
+for (let i = 0; i < 10; i++)
+{
+    if (so)
+    ~~ [CONTINUE]
+    {
+        two();
+        lines();
+    }
+}
+
+while (so)
+{
+    if (so)
+    ~~ [CONTINUE]
+    {
+        two();
+        lines();
+    }
+}
+
+do
+{
+    if (so)
+    ~~ [CONTINUE]
+    {
+        two();
+        lines();
+    }
+} while (so);
+
+[CONTINUE]: Remainder of block is inside 'if' statement. Prefer to invert the condition and 'continue' early.
+[RETURN]: Remainder of block is inside 'if' statement. Prefer to invert the condition and 'return' early.

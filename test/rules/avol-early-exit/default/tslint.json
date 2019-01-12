@@ -1,0 +1,11 @@
+{
+	"rulesDirectory": "../../../../build/rules",
+	"rules": {
+		"avol-early-exit": [
+			true,
+			{
+				"max-length": 1
+			}
+		]
+	}
+}

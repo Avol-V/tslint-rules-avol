@@ -1,0 +1,188 @@
+// valid
+
+var obj = {
+    k1: 'val1',
+    k2: 'val2',
+    k3: 'val3',
+    k4: 'val4'
+};
+var obj = {
+    k1: 'val1'
+    , k2: 'val2'
+    , k3: 'val3'
+    , k4: 'val4'
+};
+var obj = { k1: 'val1',
+    k2: 'val2',
+    k3: 'val3',
+    k4: 'val4' };
+var obj = { k1: 'val1'
+    , k2: 'val2'
+    , k3: 'val3'
+    , k4: 'val4' };
+var obj = { k1: 'val1' };
+var obj = {
+    k1: 'val1'
+};
+var obj = {};
+
+var obj = {
+    [bar]: 'baz',
+    baz
+};
+var obj = {
+    k1: 'val1',
+    k2: 'val2',
+    ...{}
+};
+var obj = { k1: 'val1',
+    k2: 'val2',
+    ...{} };
+var obj = { ...{} };
+
+foo({ k1: 'val1',
+    k2: 'val2' });
+foo({
+    k1: 'val1',
+    k2: 'val2'
+});
+
+foo({
+    a,
+    b
+});
+foo({
+    a,
+    b,
+});
+foo({
+    bar() {},
+    baz
+});
+foo({
+    [bar]: 'baz',
+    baz 
+})
+foo({
+    k1: 'val1',
+    k2: 'val2',
+    ...{}
+});
+foo({ k1: 'val1',
+    k2: 'val2',
+    ...{} });
+foo({ ...{} });
+
+// invalid
+
+var obj = { k1: 'val1', k2: 'val2', k3: 'val3' };
+                        ~~~~~~~~~~ [FAIL]
+                                    ~~~~~~~~~~ [FAIL]
+
+var obj = {
+    k1: 'val1', k2: 'val2'
+                ~~~~~~~~~~ [FAIL]
+};
+
+var obj = {
+    k1: 'val1', k2: 'val2',
+                ~~~~~~~~~~ [FAIL]
+    k3: 'val3', k4: 'val4'
+                ~~~~~~~~~~ [FAIL]
+};
+
+var obj = {k1: ['foo', 'bar'], k2: 'val1'};
+                               ~~~~~~~~~~ [FAIL]
+
+var obj = {k1: [
+    'foo', 'bar'
+], k2: 'val1'};
+   ~~~~~~~~~~ [FAIL]
+
+var obj = {
+    k1: 'val1', k2: {e1: 'foo', e2: 'bar'}, k3: 'val2'
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~ [FAIL]
+                                ~~~~~~~~~ [FAIL]
+                                            ~~~~~~~~~~ [FAIL]
+};
+
+var obj = {
+    k1: 'val1',
+    k2: {e1: 'foo', e2: 'bar'},
+                    ~~~~~~~~~ [FAIL]
+    k3: 'val2'
+};
+
+var obj = { k1: 'val1',
+    k2: [
+        'val2a', 'val2b', 'val2c'
+    ], k3: 'val3' };
+       ~~~~~~~~~~ [FAIL]
+
+var obj = { k1: 'val1', [
+                        ~
+    k2]: 'val2' };
+~~~~~~~~~~~~~~~ [FAIL]
+
+var obj = { k1: 'val1', ...{} };
+                        ~~~~~ [FAIL]
+
+var obj = {
+    k1: 'val1', ...{}
+                ~~~~~ [FAIL]
+};
+
+foo({ k1: 'val1', k2: 'val2' });
+                  ~~~~~~~~~~ [FAIL]
+
+foo({
+    k1: 'val1', k2: 'val2'
+                ~~~~~~~~~~ [FAIL]
+});
+
+foo({ a, b });
+         ~ [FAIL]
+
+foo({
+    a, b
+       ~ [FAIL]
+});
+
+foo({
+    bar() {}, baz
+              ~~~ [FAIL]
+});
+
+foo({
+    [bar]: 'baz', baz
+                  ~~~ [FAIL]
+});
+
+foo({ k1: 'val1', [
+                  ~
+    k2]: 'val2' });
+~~~~~~~~~~~~~~~ [FAIL]
+
+foo({ k1: 'val1', ...{} });
+                  ~~~~~ [FAIL]
+
+foo({
+    k1: 'val1', ...{}
+                ~~~~~ [FAIL]
+});
+
+var obj = {
+    a: {
+        b: 1,
+        c: 2
+    }, d: 2
+       ~~~~ [FAIL]
+};
+
+({ foo: 1 /* comment */, bar: 2 });
+                         ~~~~~~ [FAIL]
+
+({ foo: 1, /* comment */ bar: 2 });
+                         ~~~~~~ [FAIL]
+
+[FAIL]: Object properties must go on a new line

@@ -1,0 +1,89 @@
+/**
+ * Lint test for making sure parens are used with binary expressions
+ */
+
+const a = true;
+const b = false;
+let c;
+
+function f() {}
+
+if ( a && b ) {}
+if ( !a == b ) {}
+if ( f() || a ) {}
+c = 1 + 2 - 3 * 4 / 5;
+
+if (
+    (
+        ( a === 1 ) || ( a === 2 )
+    )
+    && (
+        ( b === 1 ) || ( b === 2 )
+    )
+)
+{}
+
+if (
+    ( a === 1 || a === 2 )
+      ~~~~~~~ [FAIL]
+                 ~~~~~~~ [FAIL]
+    && ( b === 1 || b === 2 )
+         ~~~~~~~ [FAIL]
+                    ~~~~~~~ [FAIL]
+)
+{}
+
+c = ( 1 + 2 - 3 * 4 ) & 5;
+c = 1 + 2 - 3 * 4 & 5;
+    ~~~~~~~~~~~~~ [FAIL]
+
+if ( ( a + 1 ) == 2 ) {}
+if ( a + 1 == 2 ) {}
+     ~~~~~ [FAIL]
+
+if ( ( a && b ) == b ) {}
+if ( a && b == b ) {}
+          ~~~~~~ [FAIL]
+
+
+if ( ( a && b ) == ( a || b ) ) {}
+if ( a && b == a || b ) {}
+     ~~~~~~~~~~~ [FAIL]
+          ~~~~~~ [FAIL]
+
+if ( a && b && ( a || b ) && !c ) {}
+if ( a && b && ( a || b ) || !c ) {}
+     ~~~~~~~~~~~~~~~~~~~~ [FAIL]
+
+if ( a & b === c ) {}
+         ~~~~~~~ [FAIL]
+if ( a || b === c ) {}
+          ~~~~~~~ [FAIL]
+if ( a | b === c ) {}
+         ~~~~~~~ [FAIL]
+if ( a ^ b === c ) {}
+         ~~~~~~~ [FAIL]
+if ( a === b == c ) {}
+     ~~~~~~~ [FAIL]
+if ( a == b === c ) {}
+     ~~~~~~ [FAIL]
+if ( a !== b === c ) {}
+     ~~~~~~~ [FAIL]
+if ( a != b === c ) {}
+     ~~~~~~ [FAIL]
+if ( a >= b === c ) {}
+     ~~~~~~ [FAIL]
+if ( a >>> b === c ) {}
+     ~~~~~~~ [FAIL]
+if ( a >> b === c ) {}
+     ~~~~~~ [FAIL]
+if ( a > b === c ) {}
+     ~~~~~ [FAIL]
+if ( a <= b === c ) {}
+     ~~~~~~ [FAIL]
+if ( a << b === c ) {}
+     ~~~~~~ [FAIL]
+if ( a < b === c ) {}
+     ~~~~~ [FAIL]
+
+[FAIL]: Expression clause must be parenthesized

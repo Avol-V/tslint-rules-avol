@@ -1,0 +1,43 @@
+/**
+ * Lint test for forbids function binding in JSX attributes
+ */
+
+function foo()
+{}
+
+const myButton = (
+    <button onClick={foo.bind(this)}>
+                     ~~~~~~~~~~~~~~ [FAIL]
+        Log something
+    </button>
+);
+
+const myButton2 = (
+    <button onClick={this.foo.bind(this)}>
+                     ~~~~~~~~~~~~~~~~~~~ [FAIL]
+        Log something
+    </button>
+);
+
+const myButton3 = (
+    <button onClick={
+        foo
+        ~~~
+            .bind( this )
+~~~~~~~~~~~~~~~~~~~~~~~~~ [FAIL]
+    }>
+        Log something
+    </button>
+);
+
+const selector = (
+    <Component
+        prop1={this.state.availableColumns}
+        prop2={this.onChangeHandler.bind(this)}
+               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [FAIL]
+        prop3={this.state.stateVar1}
+        prop4={foo()}
+    />
+);
+
+[FAIL]: Binds are forbidden in JSX attributes due to their rendering performance impact

@@ -1,0 +1,6 @@
+{
+	"rulesDirectory": "../../../../build/rules",
+	"rules": {
+		"avol-conditional-expression-parens": true
+	}
+}

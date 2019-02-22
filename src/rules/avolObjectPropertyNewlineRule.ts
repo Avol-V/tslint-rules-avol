@@ -1,6 +1,11 @@
 import * as Lint from 'tslint';
 import {
+	isInterfaceDeclaration,
+	isNamedExports,
+	isNamedImports,
+	isObjectBindingPattern,
 	isObjectLiteralExpression,
+	isTypeLiteralNode,
 	isTypeNodeKind,
 } from 'tsutils';
 import * as Ts from 'typescript';
@@ -11,17 +16,32 @@ import getLinesCount from '../utils/getLinesCount';
  */
 interface Options
 {
-	allowAllPropertiesOnSameLine: boolean;
+	ObjectLiteral?: NormalizedExpressionOptions;
+	TypeLiteral?: NormalizedExpressionOptions;
+	InterfaceDeclaration?: NormalizedExpressionOptions;
+	ObjectDestructuring?: NormalizedExpressionOptions;
+	Imports?: NormalizedExpressionOptions;
+	Exports?: NormalizedExpressionOptions;
+	// TODO: Деструктуризация аргумента
 }
 
 /**
- * Linting fail message
+ * Expression options
  */
-const FAIL_MESSAGE = 'Object properties must go on a new line';
+interface ExpressionOptions
+{
+	allowAllPropertiesOnSameLine: boolean | number;
+	allowAllShorthands: boolean | number;
+}
+
 /**
- * Linting fail message for `allowAllPropertiesOnSameLine` mode
+ * Normalized expression options
  */
-const FAIL_MESSAGE_ALLOW_ALL = 'Object properties must go on a new line if they aren\'t all on the same line';
+interface NormalizedExpressionOptions
+{
+	allowAllPropertiesOnSameLine: number;
+	allowAllShorthands: number;
+}
 
 /**
  * Rule to enforce the use of parentheses each clause of a conditional when they
@@ -47,9 +67,32 @@ class Rule extends Lint.Rules.AbstractRule
 	 */
 	public apply( sourceFile: Ts.SourceFile ): Lint.RuleFailure[]
 	{
+		const userOptions = ( this.ruleArguments[0] || {} ) as (
+			Options & ExpressionOptions
+		);
+		const defaults: NormalizedExpressionOptions = {
+			allowAllPropertiesOnSameLine: convertBooleanToNumber(
+				userOptions.allowAllPropertiesOnSameLine,
+			),
+			allowAllShorthands: convertBooleanToNumber(
+				userOptions.allowAllShorthands,
+			),
+		};
+		const noShorthands: Partial<NormalizedExpressionOptions> = {
+			allowAllShorthands: 0,
+		};
+		
 		const options: Options = {
-			allowAllPropertiesOnSameLine: false,
-			...this.ruleArguments[0] as Options,
+			ObjectLiteral: (
+				!userOptions.ObjectLiteral
+				? defaults
+				: getExpressionOptions( defaults, userOptions.ObjectLiteral )
+			),
+			TypeLiteral: getExpressionOptions( defaults, userOptions.TypeLiteral, noShorthands ),
+			InterfaceDeclaration: getExpressionOptions( defaults, userOptions.InterfaceDeclaration, noShorthands ),
+			ObjectDestructuring: getExpressionOptions( defaults, userOptions.ObjectDestructuring ),
+			Imports: getExpressionOptions( defaults, userOptions.Imports ),
+			Exports: getExpressionOptions( defaults, userOptions.Exports ),
 		};
 		
 		return this.applyWithFunction( sourceFile, walk, options );
@@ -61,57 +104,22 @@ class Rule extends Lint.Rules.AbstractRule
  */
 function walk( ctx: Lint.WalkContext<Options> ): void
 {
+	const options = ctx.options;
+	
+	const typesChecked = Boolean(
+		options.TypeLiteral || options.InterfaceDeclaration,
+	);
+	
 	const onNode = ( node: Ts.Node ): any =>
 	{
-		if ( isTypeNodeKind( node.kind ) )
+		if ( !typesChecked && isTypeNodeKind( node.kind ) )
 		{
 			return;
 		}
 		
-		if ( !isObjectLiteralExpression( node ) )
+		if ( isCheckableNode( node, options ) )
 		{
-			return Ts.forEachChild( node, onNode );
-		}
-		
-		const {
-			sourceFile,
-			options: {
-				allowAllPropertiesOnSameLine,
-			},
-		} = ctx;
-		
-		const errorMessage = (
-			allowAllPropertiesOnSameLine
-			? FAIL_MESSAGE_ALLOW_ALL
-			: FAIL_MESSAGE
-		);
-		
-		if (
-			allowAllPropertiesOnSameLine
-			&& ( node.properties.length > 1 )
-			&& isAllPropertiesOnSameLine( node.properties, sourceFile )
-		)
-		{
-			// All keys and values are on the same line
-			return;
-		}
-		
-		for ( let i = 1, n = node.properties.length; i < n; i++ )
-		{
-			const previousProperty = node.properties[i - 1];
-			const currentProperty = node.properties[i];
-			
-			if (
-				getLinesCount(
-					previousProperty.end,
-					currentProperty.getStart( sourceFile ),
-					sourceFile,
-				)
-				=== 1
-			)
-			{
-				ctx.addFailureAtNode( currentProperty, errorMessage );
-			}
+			checkNode( node, ctx );
 		}
 		
 		return Ts.forEachChild( node, onNode );
@@ -121,13 +129,80 @@ function walk( ctx: Lint.WalkContext<Options> ): void
 }
 
 /**
+ * Check current node
+ * 
+ * @param node Current node
+ * @param ctx Walk context
+ */
+function checkNode(
+	node: Ts.Node,
+	ctx: Lint.WalkContext<Options>,
+): void
+{
+	const elements = getNodeElements( node );
+	const elementsCount = elements.length;
+	
+	if ( elementsCount < 2 )
+	{
+		return;
+	}
+	
+	const {
+		options,
+		sourceFile,
+	} = ctx;
+	
+	const nodeOptions = getOptionsForNode( node, options );
+	const {
+		allowAllPropertiesOnSameLine,
+		allowAllShorthands,
+	} = nodeOptions;
+	
+	if (
+		(
+			( allowAllPropertiesOnSameLine >= elementsCount )
+			|| (
+				( allowAllShorthands >= elementsCount )
+				&& elements.every( isShorthand )
+				// TODO: { k1, k2, ...{} }
+			)
+		)
+		&& isAllPropertiesOnSameLine( elements, sourceFile )
+	)
+	{
+		return;
+	}
+	
+	for ( let i = 1, n = elements.length; i < n; i++ )
+	{
+		const previousProperty = elements[i - 1];
+		const currentProperty = elements[i];
+		
+		if (
+			getLinesCount(
+				previousProperty.end,
+				currentProperty.getStart( sourceFile ),
+				sourceFile,
+			)
+			=== 1
+		)
+		{
+			ctx.addFailureAtNode(
+				currentProperty,
+				getErrorMessage( nodeOptions ),
+			);
+		}
+	}
+}
+
+/**
  * Is all properties in the object on the same line?
  * 
  * @param properties Object properties
  * @param sourceFile Source file
  */
 function isAllPropertiesOnSameLine(
-	properties: Ts.NodeArray<Ts.ObjectLiteralElementLike>,
+	properties: Ts.NodeArray<Ts.Node>,
 	sourceFile: Ts.SourceFile,
 ): boolean
 {
@@ -142,6 +217,215 @@ function isAllPropertiesOnSameLine(
 		)
 		=== 1
 	);
+}
+
+/**
+ * Get options for node type
+ * 
+ * @param node Current node
+ * @param options Rule options
+ */
+function getOptionsForNode(
+	node: Ts.Node,
+	options: Options,
+): NormalizedExpressionOptions
+{
+	const defaults: NormalizedExpressionOptions = {
+		allowAllPropertiesOnSameLine: 0,
+		allowAllShorthands: 0,
+	};
+	
+	switch ( node.kind )
+	{
+		case Ts.SyntaxKind.ObjectLiteralExpression:
+			return options.ObjectLiteral || defaults;
+		
+		case Ts.SyntaxKind.TypeLiteral:
+			return options.TypeLiteral || defaults;
+		
+		case Ts.SyntaxKind.InterfaceDeclaration:
+			return options.InterfaceDeclaration || defaults;
+		
+		case Ts.SyntaxKind.ObjectBindingPattern:
+			return options.ObjectDestructuring || defaults;
+		
+		case Ts.SyntaxKind.NamedImports:
+			return options.Imports || defaults;
+		
+		case Ts.SyntaxKind.NamedExports:
+			return options.Exports || defaults;
+		
+		default:
+			return defaults;
+	}
+}
+
+/**
+ * Get elements or properties from node
+ * 
+ * @param node Current node
+ * @param options Rule options
+ */
+function getNodeElements(
+	node: Ts.Node,
+): Ts.NodeArray<Ts.Node>
+{
+	switch ( node.kind )
+	{
+		case Ts.SyntaxKind.ObjectLiteralExpression:
+			return ( node as Ts.ObjectLiteralExpression ).properties;
+		
+		case Ts.SyntaxKind.TypeLiteral:
+			return ( node as Ts.TypeLiteralNode ).members;
+		
+		case Ts.SyntaxKind.InterfaceDeclaration:
+			return ( node as Ts.InterfaceDeclaration ).members;
+		
+		case Ts.SyntaxKind.ObjectBindingPattern:
+			return ( node as Ts.ObjectBindingPattern ).elements;
+		
+		case Ts.SyntaxKind.NamedImports:
+			return ( node as Ts.NamedImports ).elements;
+		
+		case Ts.SyntaxKind.NamedExports:
+			return ( node as Ts.NamedExports ).elements;
+		
+		default:
+			return Ts.createNodeArray();
+	}
+}
+
+/**
+ * Get expression options
+ * 
+ * @param defaults Default options
+ * @param options Expression options
+ * @param overwrite Overwrite these options
+ */
+function getExpressionOptions(
+	defaults: NormalizedExpressionOptions,
+	options: ExpressionOptions | boolean | undefined,
+	overwrite: Partial<NormalizedExpressionOptions> = {},
+): NormalizedExpressionOptions | undefined
+{
+	if ( options === true )
+	{
+		return { ...defaults };
+	}
+	
+	if ( !options || ( typeof options !== 'object' ) )
+	{
+		return;
+	}
+	
+	const result = {
+		...defaults,
+		...options,
+		...overwrite,
+	};
+	
+	return {
+		...result,
+		allowAllPropertiesOnSameLine: convertBooleanToNumber(
+			result.allowAllPropertiesOnSameLine,
+		),
+		allowAllShorthands: convertBooleanToNumber(
+			result.allowAllShorthands,
+		),
+	};
+}
+
+/**
+ * Is we should check current node?
+ * 
+ * @param node Current node
+ * @param options Rule options
+ */
+function isCheckableNode( node: Ts.Node, options: Options ): node is (
+	Ts.ObjectLiteralExpression
+	| Ts.TypeLiteralNode
+	| Ts.InterfaceDeclaration
+	| Ts.ObjectBindingPattern
+	| Ts.NamedImports
+	| Ts.NamedExports
+)
+{
+	return Boolean(
+		( options.ObjectLiteral && isObjectLiteralExpression( node ) )
+		|| ( options.TypeLiteral && isTypeLiteralNode( node ) )
+		|| ( options.InterfaceDeclaration && isInterfaceDeclaration( node ) )
+		|| ( options.ObjectDestructuring && isObjectBindingPattern( node ) )
+		|| ( options.Imports && isNamedImports( node ) )
+		|| ( options.Exports && isNamedExports( node ) ),
+	);
+}
+
+/**
+ * Is element node a shorthand property?
+ * 
+ * @param node Element node
+ */
+function isShorthand( node: Ts.Node ): boolean
+{
+	return (
+		( node.kind === Ts.SyntaxKind.ShorthandPropertyAssignment )
+		|| (
+			[
+				Ts.SyntaxKind.BindingElement,
+				Ts.SyntaxKind.ImportSpecifier,
+				Ts.SyntaxKind.ExportSpecifier,
+			].includes( node.kind )
+			&& !(
+				node as ( Ts.BindingElement | Ts.ImportSpecifier | Ts.ExportSpecifier )
+			).propertyName
+		)
+	);
+}
+
+/**
+ * Convert boolean option value to number
+ * 
+ * @param value Options value
+ */
+function convertBooleanToNumber( value?: boolean | number ): number
+{
+	return (
+		( typeof value === 'boolean' )
+		? ( value ? Number.MAX_VALUE : 0 )
+		: ( value || 0 )
+	);
+}
+
+/**
+ * Get error message
+ * 
+ * @param options Expression options
+ */
+function getErrorMessage( options: NormalizedExpressionOptions ): string
+{
+	if ( options.allowAllPropertiesOnSameLine )
+	{
+		return (
+			( options.allowAllPropertiesOnSameLine >= Number.MAX_VALUE )
+			? 'Object properties must go on a new line if they aren\'t all on the same line'
+			: `Object properties must go on a new line if there are more than ${
+				options.allowAllPropertiesOnSameLine
+			} properties`
+		);
+	}
+	
+	if ( options.allowAllShorthands )
+	{
+		return (
+			( options.allowAllShorthands >= Number.MAX_VALUE )
+			? 'Object properties must go on a new line if they aren\'t all shorthands on the same line'
+			: `Object properties must go on a new line if they aren't all shorthands and there are more than ${
+				options.allowAllShorthands
+			} properties`
+		);
+	}
+	
+	return 'Object properties must go on a new line';
 }
 
 /**

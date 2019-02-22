@@ -1,0 +1,11 @@
+{
+	"rulesDirectory": "../../../../build/rules",
+	"rules": {
+		"avol-object-property-newline": [
+			true,
+			{
+				"allowAllPropertiesOnSameLine": 3
+			}
+		]
+	}
+}

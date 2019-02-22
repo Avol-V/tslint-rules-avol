@@ -1,0 +1,107 @@
+const k1 = 'v1';
+const k2 = 'v1';
+const k3 = 'v1';
+const k4 = 'v1';
+
+// valid
+
+var obj = { k1, k2, k3 };
+var obj = {
+    k1, k2, k3
+};
+var obj = { k1 };
+var obj = {
+    k1
+};
+var obj = {};
+var obj = { 'k1', k2, ...{} };
+var obj = {
+    k1, k2, ...{}
+};
+foo({ k1, k2 });
+foo({
+    k1, k2
+});
+foo({ a, b });
+foo({ 'k1', k2, ...{} });
+foo({
+    'k1', k2, ...{}
+});
+var obj = { k1, k2, k3, k4 };
+
+// invalid
+
+var obj = { k1, k2, k3: 'v1' };
+                ~~ [FAIL]
+                    ~~ [FAIL]
+
+var obj = {
+    k1,
+    k2, k3
+        ~~ [FAIL]
+};
+
+var obj = {
+    k1
+    , k2, k3
+      ~~ [FAIL]
+          ~~ [FAIL]
+    ,
+};
+
+var obj = {k1: [
+    'foo', 'bar'
+], k2};
+   ~~ [FAIL]
+
+var obj = {
+    k1, k2: {
+        ~~~~~
+        e1: 'foo', e2: 'bar'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    }, k3
+~~~~~ [FAIL]
+       ~~ [FAIL]
+};
+
+var obj = { k1,
+    k2: [
+        'val2a', 'val2b', 'val2c'
+    ], k3 };
+       ~~ [FAIL]
+
+var obj = {
+    k1,
+    k2, ...{}
+        ~~~~~ [FAIL]
+};
+
+var obj = {
+    ...{},
+    k1, k2
+        ~~ [FAIL]
+};
+
+foo({
+    k1,
+    k2, ...{}
+        ~~~~~ [FAIL]
+});
+
+foo({
+    ...{},
+    k1, k2
+        ~~ [FAIL]
+});
+
+foo({ [bar]: 'baz', baz });
+                    ~~~ [FAIL]
+foo({ bar() {}, baz });
+                ~~~ [FAIL]
+var obj = {
+    k1, k2: {k1, k2}, k3
+        ~~~~~~~~~~~~ [FAIL]
+                      ~~ [FAIL]
+};
+
+[FAIL]: Object properties must go on a new line if they aren't all shorthands on the same line

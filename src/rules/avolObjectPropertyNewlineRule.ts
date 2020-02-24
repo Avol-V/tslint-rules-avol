@@ -16,13 +16,31 @@ import getLinesCount from '../utils/getLinesCount';
  */
 interface Options
 {
+	/**
+	 * `const o = {};`
+	 */
 	ObjectLiteral?: NormalizedExpressionOptions;
+	/**
+	 * `type T = {};`
+	 */
 	TypeLiteral?: NormalizedExpressionOptions;
+	/**
+	 * `interface T {}`
+	 */
 	InterfaceDeclaration?: NormalizedExpressionOptions;
+	/**
+	 * `const {} = o;`  
+	 * `function f( {} ) {}`
+	 */
 	ObjectDestructuring?: NormalizedExpressionOptions;
+	/**
+	 * `import {} from 'm';`
+	 */
 	Imports?: NormalizedExpressionOptions;
+	/**
+	 * `export {};`
+	 */
 	Exports?: NormalizedExpressionOptions;
-	// TODO: Деструктуризация аргумента
 }
 
 /**
@@ -31,16 +49,16 @@ interface Options
 interface ExpressionOptions
 {
 	allowAllPropertiesOnSameLine: boolean | number;
-	allowAllShorthands: boolean | number;
+	onlyShorthands: boolean;
+	allowSpread: boolean;
 }
 
 /**
  * Normalized expression options
  */
-interface NormalizedExpressionOptions
+interface NormalizedExpressionOptions extends ExpressionOptions
 {
 	allowAllPropertiesOnSameLine: number;
-	allowAllShorthands: number;
 }
 
 /**
@@ -74,12 +92,19 @@ class Rule extends Lint.Rules.AbstractRule
 			allowAllPropertiesOnSameLine: convertBooleanToNumber(
 				userOptions.allowAllPropertiesOnSameLine,
 			),
-			allowAllShorthands: convertBooleanToNumber(
-				userOptions.allowAllShorthands,
+			onlyShorthands: Boolean( userOptions.onlyShorthands ),
+			allowSpread: (
+				( userOptions.allowSpread === undefined )
+				? true
+				: Boolean( userOptions.allowSpread )
 			),
 		};
 		const noShorthands: Partial<NormalizedExpressionOptions> = {
-			allowAllShorthands: 0,
+			onlyShorthands: false,
+			allowSpread: false,
+		};
+		const noSpread: Partial<NormalizedExpressionOptions> = {
+			allowSpread: false,
 		};
 		
 		const options: Options = {
@@ -91,8 +116,8 @@ class Rule extends Lint.Rules.AbstractRule
 			TypeLiteral: getExpressionOptions( defaults, userOptions.TypeLiteral, noShorthands ),
 			InterfaceDeclaration: getExpressionOptions( defaults, userOptions.InterfaceDeclaration, noShorthands ),
 			ObjectDestructuring: getExpressionOptions( defaults, userOptions.ObjectDestructuring ),
-			Imports: getExpressionOptions( defaults, userOptions.Imports ),
-			Exports: getExpressionOptions( defaults, userOptions.Exports ),
+			Imports: getExpressionOptions( defaults, userOptions.Imports, noSpread ),
+			Exports: getExpressionOptions( defaults, userOptions.Exports, noSpread ),
 		};
 		
 		return this.applyWithFunction( sourceFile, walk, options );
@@ -155,16 +180,19 @@ function checkNode(
 	const nodeOptions = getOptionsForNode( node, options );
 	const {
 		allowAllPropertiesOnSameLine,
-		allowAllShorthands,
+		onlyShorthands,
+		allowSpread,
 	} = nodeOptions;
 	
 	if (
-		(
-			( allowAllPropertiesOnSameLine >= elementsCount )
-			|| (
-				( allowAllShorthands >= elementsCount )
-				&& elements.every( isShorthand )
-				// TODO: { k1, k2, ...{} }
+		( allowAllPropertiesOnSameLine >= elementsCount )
+		&& (
+			!onlyShorthands
+			|| elements.every(
+				( element ) => (
+					isShorthand( element )
+					|| ( allowSpread && isSpread( element ) )
+				),
 			)
 		)
 		&& isAllPropertiesOnSameLine( elements, sourceFile )
@@ -232,7 +260,8 @@ function getOptionsForNode(
 {
 	const defaults: NormalizedExpressionOptions = {
 		allowAllPropertiesOnSameLine: 0,
-		allowAllShorthands: 0,
+		onlyShorthands: false,
+		allowSpread: true,
 	};
 	
 	switch ( node.kind )
@@ -318,19 +347,30 @@ function getExpressionOptions(
 		return;
 	}
 	
-	const result = {
+	const current = {
 		...defaults,
 		...options,
+	};
+	const extra: Partial<NormalizedExpressionOptions> = {};
+	
+	if (
+		current.onlyShorthands
+		&& ( overwrite.onlyShorthands === false )
+	)
+	{
+		extra.allowAllPropertiesOnSameLine = 0;
+	}
+	
+	const result = {
+		...current,
 		...overwrite,
+		...extra,
 	};
 	
 	return {
 		...result,
 		allowAllPropertiesOnSameLine: convertBooleanToNumber(
 			result.allowAllPropertiesOnSameLine,
-		),
-		allowAllShorthands: convertBooleanToNumber(
-			result.allowAllShorthands,
 		),
 	};
 }
@@ -378,6 +418,23 @@ function isShorthand( node: Ts.Node ): boolean
 			&& !(
 				node as ( Ts.BindingElement | Ts.ImportSpecifier | Ts.ExportSpecifier )
 			).propertyName
+			&& !( node as Ts.BindingElement ).dotDotDotToken
+		)
+	);
+}
+
+/**
+ * Is element node a spread expression?
+ * 
+ * @param node Element node
+ */
+function isSpread( node: Ts.Node ): boolean
+{
+	return (
+		( node.kind === Ts.SyntaxKind.SpreadAssignment )
+		|| (
+			( node.kind === Ts.SyntaxKind.BindingElement )
+			&& ( ( node as Ts.BindingElement ).dotDotDotToken != null )
 		)
 	);
 }
@@ -405,22 +462,32 @@ function getErrorMessage( options: NormalizedExpressionOptions ): string
 {
 	if ( options.allowAllPropertiesOnSameLine )
 	{
+		if ( options.onlyShorthands )
+		{
+			const orSpread = (
+				options.allowSpread
+				? ' or spread'
+				: ''
+			);
+			
+			return (
+				( options.allowAllPropertiesOnSameLine >= Number.MAX_VALUE )
+				? `Object properties must go on a new line if they aren't all shorthands${
+					orSpread
+				} on the same line`
+				: `Object properties must go on a new line if they aren't all shorthands${
+					orSpread
+				} and there are more than ${
+					options.allowAllPropertiesOnSameLine
+				} properties`
+			);
+		}
+		
 		return (
 			( options.allowAllPropertiesOnSameLine >= Number.MAX_VALUE )
 			? 'Object properties must go on a new line if they aren\'t all on the same line'
 			: `Object properties must go on a new line if there are more than ${
 				options.allowAllPropertiesOnSameLine
-			} properties`
-		);
-	}
-	
-	if ( options.allowAllShorthands )
-	{
-		return (
-			( options.allowAllShorthands >= Number.MAX_VALUE )
-			? 'Object properties must go on a new line if they aren\'t all shorthands on the same line'
-			: `Object properties must go on a new line if they aren't all shorthands and there are more than ${
-				options.allowAllShorthands
 			} properties`
 		);
 	}

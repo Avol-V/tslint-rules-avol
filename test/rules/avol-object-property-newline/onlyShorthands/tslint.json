@@ -4,7 +4,8 @@
 		"avol-object-property-newline": [
 			true,
 			{
-				"allowAllShorthands": true
+				"allowAllPropertiesOnSameLine": true,
+				"onlyShorthands": true
 			}
 		]
 	}

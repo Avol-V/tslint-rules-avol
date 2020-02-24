@@ -14,7 +14,7 @@ var obj = {
     k1
 };
 var obj = {};
-var obj = { 'k1', k2, ...{} };
+var obj = { k1, k2, ...{} };
 var obj = {
     k1, k2, ...{}
 };
@@ -23,9 +23,9 @@ foo({
     k1, k2
 });
 foo({ a, b });
-foo({ 'k1', k2, ...{} });
+foo({ k1, k2, ...{} });
 foo({
-    'k1', k2, ...{}
+    k1, k2, ...{}
 });
 var obj = { k1, k2, k3, k4 };
 
@@ -33,7 +33,7 @@ var obj = { k1, k2, k3, k4 };
 
 var obj = { k1, k2, k3: 'v1' };
                 ~~ [FAIL]
-                    ~~ [FAIL]
+                    ~~~~~~~~ [FAIL]
 
 var obj = {
     k1,
@@ -44,7 +44,6 @@ var obj = {
 var obj = {
     k1
     , k2, k3
-      ~~ [FAIL]
           ~~ [FAIL]
     ,
 };
@@ -59,6 +58,7 @@ var obj = {
         ~~~~~
         e1: 'foo', e2: 'bar'
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                   ~~~~~~~~~ [FAIL]
     }, k3
 ~~~~~ [FAIL]
        ~~ [FAIL]
@@ -104,4 +104,4 @@ var obj = {
                       ~~ [FAIL]
 };
 
-[FAIL]: Object properties must go on a new line if they aren't all shorthands on the same line
+[FAIL]: Object properties must go on a new line if they aren't all shorthands or spread on the same line

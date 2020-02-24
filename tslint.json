@@ -1,0 +1,24 @@
+{
+	"extends": "tslint-config-avol",
+	"rules": {
+		"avol-binary-expression-parens": true,
+		"avol-conditional-expression-parens": true,
+		"avol-early-exit": [
+			true,
+			{
+				"max-length": 3,
+				"ignore-constructor": true
+			}
+		],
+		"avol-jsx-no-bind": true,
+		"avol-object-property-newline": true
+	},
+	"rulesDirectory": [
+		"./build/rules"
+	],
+	"linterOptions": {
+		"exclude": [
+			"./build/**/*.js"
+		]
+	}
+}

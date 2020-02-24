@@ -1,0 +1,49 @@
+{
+  "name": "tslint-rules-avol",
+  "version": "1.0.0",
+  "description": "TSLint Rules for Avol codestyle",
+  "author": "Andrey Avol Volynkin",
+  "license": "MIT",
+  "homepage": "https://github.com/Avol-V/tslint-rules-avol#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Avol-V/tslint-rules-avol.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Avol-V/tslint-rules-avol/issues"
+  },
+  "keywords": [
+    "tslint",
+    "custom-rules",
+    "rules",
+    "lint",
+    "linting",
+    "linter",
+    "tslint-plugin",
+    "typescript",
+    "ts",
+    "avol"
+  ],
+  "main": "build/rules/index.js",
+  "engines": {
+    "node": ">=8"
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint:scripts-project": "tslint -c tslint-project.json -p tsconfig.json",
+    "lint": "npm run lint:scripts-project",
+    "test:rules": "tslint --test test/rules/*/*",
+    "test": "npm run lint && npm run test:rules"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^10.12.18",
+    "tslint": "^5.12.0",
+    "tslint-config-avol": "git+https://github.com/Avol-V/tslint-config-avol.git",
+    "tsutils": "^3.6.0",
+    "typescript": "^3.2.2"
+  },
+  "peerDependencies": {
+    "tslint": "^5.12.0"
+  }
+}
